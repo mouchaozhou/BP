@@ -1,0 +1,151 @@
+;+===========================annotation--begin===================================================
+; This is a main program
+;
+; :Purpose:
+;    从211上得到AIA峰值的时刻，然后处理193的数据，作那一时刻所有HMI峰值的Flux和AIA193峰值强度的曲线图   
+; :Author: Chaozhou Mou
+;-===========================annotation--end======================================================
+
+@repBP.in
+
+;创建对象
+oHmiData4Ref = obj_new('HMI')  ;用来找到aia校正数据的HMI对象
+oHmiData4Pek = obj_new('HMI')  ;用来找到aia峰值数据的HMI对象 
+oAiaData = obj_new('AIA',fix(waveLen))
+
+;输入路径
+hmiDir = '/data1/moucz/HMI_BP/Data/' + date +'/'
+hmiFile = hmiFileHead + '*.fits'
+aiaDir = '/data1/moucz/AIA_BP/Data/' + date + '/' + waveLen + '/'
+
+;定义输出路径
+peakDataDir = MakeDir('../Save/PeakData/' + date + '/' + wavelen + '/') 
+
+;设置搜索文件的相关参数
+oHmiData4Ref->SetProperty,inputDir=hmiDir,inputFile=hmiFile
+oAiaData->SetProperty,inputDir=aiaDir
+
+;搜索文件 
+oHmiData4Ref->FileSearch
+
+;事件总数
+nCase = 70
+
+;存储AIA和HMI峰值强度的数组
+hmiPeakArr = fltarr(nCase) ;正极通量 + 负极通量 = 总通量
+aiaPeakArr = fltarr(nCase)
+
+;#test
+;nCase = 1
+;#endtest
+for areaNum=1,nCase do begin    
+    ;输入路径和输入文件  
+    hmiInBoxDir = '../../HMI_BP/Save/PhysInbox/' + date + '/211/' + IToA(areaNum) + '/'
+    
+    ;#region HMI部分
+    ;恢复sav中存放的数据(曲线数据)
+    hmiBPGetBoxSavData,hmiInboxDir+'*.sav',arrTime=arrTime,bgPosFlux=bgPosFlux,bgNegFlux=bgNegFlux,/scale,/info
+    
+    ;获得每个事件的峰值时间
+    peakTime = repBPGetPeakTime(IToA(areaNum))
+    
+    ;得到峰值对应的文件编号
+    peakIndex = WhereEx(peakTime eq arrTime)
+    
+    ;#test
+    ;Dbg,bgPosFlux[peakIndex]
+    ;Dbg,bgNegFlux[peakIndex]
+    ;#endtest
+    
+    ;保存数据
+    hmiPeakArr[areaNum-1] = bgPosFlux[peakIndex] + bgNegFlux[peakIndex]
+    ;#endregion 
+    
+    ;#region AIA部分1：找到需要作太阳自传的参考数据
+    ;首先获取该事件的编号
+    hmiGetEvtNum,date,IToA(areaNum),refNum=refNum
+    
+    ;或得hmi文件的中的时间
+    oHmiData4Ref->GetFnamTime,hmiFileHead,i=refNum,Year=Year,Month=Month,Day=Day,Hour=Hour,Minute=Minute
+    
+    ;得到aia参考数据文件名
+    aiaFile = strcompress(aiaFileHead + Year + aiaymdChar + Month + aiaymdChar + Day + aiaconnChar + $
+                          Hour + aiahmsChar + Minute + '*.fits',/remove_all)  ;获取AIA文件中的小时和分钟传递给HMI用来读取数据
+                          
+    ;搜索aia文件                                           
+    oAiaData->SetProperty,inputFile=aiaFile
+    oAiaData->FileSearch  
+    
+    ;获得aia的参考数据                                    
+    oAiaData->ReadData,0,/prep
+    oAiaData->Index2Map
+    
+    ;获得AIA的参考数据  
+    oAiaData->GetDRotRefPar,/subMap,cropPar=aiaCropPar(date,IToA(areaNum))    
+    ;#endregion
+    
+    ;#region AIA部分2：找到峰值对应的数据
+    hmiSavDir = '../../HMI_BP/Save/AfterCmp/' + date + '/211/' + IToA(areaNum) + '/' 
+    oHmiData4Pek->SetProperty,inputDir=hmiSavDir,inputFile='*.sav' 
+    
+    ;搜索HMI文件 
+    oHmiData4Pek->FileSearch 
+    
+    ;或得hmi文件的中的时间
+    oHmiData4Pek->GetFnamTime,hmiFileHead,i=peakIndex,Year=Year,Month=Month,Day=Day,Hour=Hour,Minute=Minute
+    
+    ;得到aia峰值数据文件名
+    aiaPeakFile = strcompress(aiaFileHead + Year + AiaymdChar + Month + AiaymdChar + Day + AiaconnChar + $
+                             Hour + AiahmsChar + Minute + '*.fits',/remove_all)  ;获取hmi文件中的小时和分钟传递给aia用来读取数据
+                          
+    ;搜索aia数据
+    oAiaData->SetProperty,inputFile=aiaPeakFile
+    oAiaData->FileSearch 
+    oAiaData->GetProperty,nFiles=nAia
+    
+    ;读入aia的Map数据 
+    for j=0,nAia-1 do begin 
+        ;读入数据
+        oAiaData->ReadData,j,/prep
+        oAiaData->Index2Map
+        
+        ;太阳自传消除并截取相同区域
+        oAiaData->DRotate
+        
+        ;消除曝光时间的影响
+        oAiaData->DExprTime  
+        
+        ;#region AIA部分3：取出Box框中的数据强度
+        ;设置box坐标
+        oAiaData->SetProperty,needArea=hmiGetBoxCoord(IToA(areaNum))
+        ;设置临时变量
+        tmpAiaIntyBoxSum = 0.
+        
+        ;获取 Box内的aia强度
+        tmpAiaIntyBox = oAiaData->GetAreTotPhy(/map)
+                    
+        if (tmpAiaIntyBox le 2.) then begin  ;去除坏点
+            tmpAiaIntyBox = !VALUES.F_NAN
+        endif
+        
+        ;求和准备取平均值
+        tmpAiaIntyBoxSum += tmpAiaIntyBox
+        ;#endregion
+    endfor
+    
+    ;aia平均1分钟内的强度
+    aiaPeakArr[areaNum-1] = tmpAiaIntyBoxSum / nAia
+    
+    ;#endregion
+endfor
+
+;存储数据
+save,aiaPeakArr,hmiPeakArr,filename=peakDataDir+'repBPPeakData'+waveLen+'.sav'
+
+;销毁对象
+obj_destroy,oHmiData4Ref
+obj_destroy,oHmiData4Pek
+obj_destroy,oAiaData
+
+Over
+END  

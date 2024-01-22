@@ -1,0 +1,151 @@
+;+===========================annotation--begin===================================================
+; This is a main program
+;
+; :Purpose:
+;    解决refree提出的coalign问题
+;
+; :Author: Chaozhou Mou
+;-===========================annotation--end======================================================
+
+@repBP.in
+
+;创建aia和hmi对象
+oAia1600Data = obj_new('AIA',1600) ;第二项是波长信息
+oAia304Data = obj_new('AIA',304)  
+oAia193Data = obj_new('AIA',193)  
+oHmiData = obj_new('HMI')
+
+;文件头部字符串
+aiaFileHead12s = 'aia.lev1_euv_12s.'
+aiaFileHead24s = 'aia.lev1_uv_24s.'
+
+;输入路径和输入文件
+aia1600Dir = '/data2/moucz/AIA_BP/Data/' + date + '/1600/'
+aia304Dir = '/data2/moucz/AIA_BP/Data/' + date + '/304/'
+aia193Dir = '/data1/moucz/AIA_BP/Data/' + date + '/193/'
+hmiDir = '/data1/moucz/HMI_BP/Data/' + date +'/'
+hmiFile = hmiFileHead + '*.fits'
+
+;输出路径
+allFigDir = MakeDir('../Image/AfterCoalign/'+ date + '/' + areaNum + '/')
+
+;设置搜索文件的相关参数
+oAia1600Data->SetProperty,inputDir=aia1600Dir
+oAia304Data->SetProperty,inputDir=aia304Dir
+oAia193Data->SetProperty,inputDir=aia193Dir
+oHmiData->SetProperty,inputDir=hmiDir,inputFile=hmiFile,outputDir=allFigDir
+
+;搜索文件 
+oHmiData->FileSearch 
+
+;获得找到后的文件个数
+oHmiData->GetProperty,fileArr=hmiFileArr,nFiles=nHmi
+
+;得到事件的起始和结束文件编号
+hmiGetEvtNum,date,areaNum,beginNum=beginNum,refNum=refNum,endNum=endNum
+
+;#region 获得数据
+;获得HMI的数据
+oHmiData->ReadData,refNum,/prep
+oHmiData->Index2Map
+
+;从Hmi挑出与Aia符合的图
+oHmiData->GetFnamTime,HmiFileHead,Year=Year,Month=Month,Day=Day,Hour=Hour,Minute=Minute
+aia1600File = strcompress(aiaFileHead24s + Year + aiaymdChar + Month + aiaymdChar + Day + aiaconnChar + $
+                          Hour + aiahmsChar + Minute + '*.fits',/remove_all) 
+aia304File = strcompress(aiaFileHead12s + Year + aiaymdChar + Month + aiaymdChar + Day + aiaconnChar + $
+                         Hour + aiahmsChar + Minute + '*.fits',/remove_all) 
+aia193File = aia304File
+
+;搜索aia数据
+oAia1600Data->SetProperty,inputFile=aia1600File
+oAia1600Data->FileSearch 
+
+oAia304Data->SetProperty,inputFile=aia304File
+oAia304Data->FileSearch 
+
+oAia193Data->SetProperty,inputFile=aia193File
+oAia193Data->FileSearch 
+
+;读入aia的Map数据  
+oAia1600Data->ReadData,0,/prep
+oAia1600Data->Index2Map    
+
+oAia304Data->ReadData,0,/prep
+oAia304Data->Index2Map    
+
+oAia193Data->ReadData,0,/prep
+oAia193Data->Index2Map    
+;#endregion
+
+;#region 截取数据
+needArea = aiaCropPar(date,areaNum)
+oHmiData->SetProperty,needArea=needArea
+oHmiData->SubMap
+oHmiData->GetProperty,map=hmiMap
+oHmiData->SetProperty,contrData=hmiMap.data
+
+;获得中心坐标偏移量
+;repBPGetXYoffset,areaNum,xcOffset=xcOffset,ycOffset=ycOffset
+;#test
+xcOffset = 2.5
+ycOffset = 2.5
+;#endtest
+
+;1600
+oAia1600Data->SetProperty,needArea=needArea,contrData=hmiMap.data
+oAia1600Data->AdjustMap,'xc',xcOffset
+oAia1600Data->AdjustMap,'yc',ycOffset 
+oAia1600Data->SubMap  
+
+;304
+oAia304Data->SetProperty,needArea=needArea,contrData=hmiMap.data
+oAia304Data->AdjustMap,'xc',xcOffset
+oAia304Data->AdjustMap,'yc',ycOffset  
+oAia304Data->SubMap  
+
+;193
+oAia193Data->SetProperty,needArea=needArea,contrData=hmiMap.data
+oAia193Data->AdjustMap,'xc',xcOffset
+oAia193Data->AdjustMap,'yc',ycOffset  
+oAia193Data->SubMap  
+;#endregion
+
+
+;#region 作图
+;设置画图参数
+oHmiData->SetProperty,threshold=hmiThreshold,position=[0.025,0.525,0.475,0.975]
+oAia1600Data->SetProperty,threshold=[100.,450.],position=[0.525,0.525,0.975,0.975] 
+oAia304Data->SetProperty,threshold=[10.,200.],position=[0.025,0.025,0.475,0.475]
+oAia193Data->SetProperty,threshold=[10.,500.],position=[0.525,0.025,0.975,0.475]
+
+device,decomposed=1    
+window,0,xsize=1000,ysize=1000,retain=2
+loadct,0
+oHmiData->PlotMap
+oAia1600Data->Contour,color=GetColour('Yellow')
+;1600
+oAia1600Data->Lct 
+oAia1600Data->PlotMap,/noerase
+oAia1600Data->Contour,color=GetColour('Blue')
+;304
+oAia304Data->Lct 
+oAia304Data->PlotMap,/noerase
+oAia304Data->Contour,color=GetColour('Blue')
+;193
+oAia193Data->Lct 
+oAia193Data->PlotMap,/noerase
+oAia193Data->Contour,color=GetColour('Blue')
+;#endregion
+
+;存储图片
+oHmiData->SavImage
+
+;销毁对象
+obj_destroy,oAia1600Data 
+obj_destroy,oAia304Data
+obj_destroy,oAia193Data
+obj_destroy,oHmiData
+Say,'areaNum: ',areaNum
+Over
+END

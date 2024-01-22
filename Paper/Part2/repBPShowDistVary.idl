@@ -1,0 +1,126 @@
+;+===========================annotation--begin===================================================
+; :Purpose:
+;    将 Magnetic Formation 中的Emergence、 Convergence 和  Local coalescence的距离变化用图表示出来
+; :Author: Chaozhou Mou
+;-===========================annotation--end======================================================
+
+;输入路径和文件
+savdir = 'C:\Users\yanlm\Desktop\work\'
+savFile = 'repBPDistVaryData.sav'
+
+;输出路径和文件
+figFile = 'repBPDistVary.eps'
+
+;恢复数据
+restore,savDir+savFile,/ve
+
+;打开PS
+set_plot,'PS'
+device,filename=savdir+figFile,xsize=16,ysize=9.7,bits=8,/color,/encapsul  ;A4纸 ： 21cm × 29.7cm
+
+;位置
+pos = [0.1,0.1,0.95,0.95]
+;颜色
+tvlct,255,0,0,1  ;Red
+tvlct,0,0,255,2  ;Blue
+
+;Emergence
+x = [0.5,2.5]
+;统计shorter (longer)distance at “beginning” than at “peak”
+shorter = 0
+longer = 0
+equal = 0
+
+for i=0,n_elements(emgBegDis)-1 do begin 
+    if (i eq 0) then begin
+        minY = min([emgBegDis,emgPekDis,covBegDis,covPekDis,locBegDis,locPekDis]) - 1
+        maxY = max([emgBegDis,emgPekDis,covBegDis,covPekDis,locBegDis,locPekDis]) + 1
+        plot,x,[emgBegDis[i],emgPekDis[i]],xstyle=1,ystyle=1,psym=-4, $
+             color=0,xrange=[0,9], $
+             yrange=[minY,maxY],ytitle='Distance (arcsec)', $
+             position=pos,xtickname=[' ',' ','Begin',' ','Peak']                                      
+    endif $
+    else begin
+        oplot,x,[emgBegDis[i],emgPekDis[i]],psym=-4  ;◇        
+    endelse
+
+    ;计算线性函数的参数
+    LinearFunction,[x[0],emgBegDis[i]],[x[1],emgPekDis[i]],k=k   
+    if (k gt 0) then begin
+        shorter++
+    endif $
+    else if (k lt 0) then begin
+        longer++
+    endif $
+    else begin
+        equal++
+    endelse
+    
+    ;根据k选颜色     
+    color = (k le 0) ? 1 : 2
+    
+    ;获取坐标编号坐标  
+    lineNumCord = repBPGetDistLineNumCord(emgEvtNum[i]) 
+    xyouts,lineNumCord[0],lineNumCord[1],emgEvtNum[i],/data,color=color,charsize=0.4
+endfor
+Say,'shorter: ',shorter
+Say,'longer: ',longer
+Say,'equal: ',equal
+
+;画虚线
+y = GradeArr(minY,1,maxY)
+x = intarr(n_elements(y)) + 3
+oplot,x,y,linestyle=2
+
+;Convergence
+x = [4,5]
+for i=0,n_elements(covBegDis)-1 do begin
+    oplot,x,[covBegDis[i],covPekDis[i]],psym=-2   ;*
+    
+    ;计算线性函数的参数
+    LinearFunction,[x[0],covBegDis[i]],[x[1],covPekDis[i]],k=k   
+    ;根据k选颜色     
+    color = (k le 0) ? 1 : 2
+    
+    ;获取坐标编号坐标  
+    lineNumCord = repBPGetDistLineNumCord(covEvtNum[i]) 
+    xyouts,lineNumCord[0],lineNumCord[1],covEvtNum[i],/data,color=color,charsize=0.5 
+endfor
+
+;画虚线
+x = intarr(n_elements(y)) + 6
+oplot,x,y,linestyle=2
+
+;Local coalescence
+x = [7,8]
+for i=0,n_elements(locBegDis)-1 do begin
+    oplot,x,[locBegDis[i],locPekDis[i]],psym=-1  ;+
+    ;计算线性函数的参数
+    LinearFunction,[x[0],locBegDis[i]],[x[1],locPekDis[i]],k=k,b=b 
+    ;根据k选颜色     
+    color = (k le 0) ? 1 : 2
+    
+    ;获取坐标编号坐标 
+    lineNumCord = repBPGetDistLineNumCord(locEvtNum[i]) 
+    xyouts,lineNumCord[0],lineNumCord[1],locEvtNum[i],/data,color=color,charsize=0.5
+endfor
+  
+;文字标注
+dyCord = 3.0
+xyouts,pos[0]+0.2,pos[1]-dyCord,'Begin'
+xyouts,pos[0]+2.2,pos[1]-dyCord,'Peak'
+xyouts,pos[0]+4.6,pos[1]-dyCord,'Peak'
+xyouts,pos[0]+6.6,pos[1]-dyCord,'Begin'
+
+charsize = 0.8
+xyouts,1.5,26,'Emergence',/data,charsize=charsize
+xyouts,4.5,26,'Convergence',/data,charsize=charsize
+xyouts,7.0,26,'Local Coalescence',/data,charsize=charsize
+   
+   
+;关闭PS
+device,/close_file
+set_plot,'win'
+
+Over
+END    

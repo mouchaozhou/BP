@@ -1,0 +1,63 @@
+;+===========================annotation--begin===================================================
+; This is a main program
+;
+; :Purpose:
+;    画HMI峰值的Flux和AIA193峰值强度的曲线图    
+; :Author: Chaozhou Mou
+;-===========================annotation--end======================================================
+
+@repBP.in
+
+;输入路径和文件
+peakDataDir = '../Save/PeakData/' + date + '/' + wavelen + '/'
+peakDataFile = '*.sav'
+
+;输出路径和文件
+figDir = MakeDir('../Image/Peak/')
+figFile = 'repBPPeak.eps'
+
+;打开PS
+set_plot,'PS'
+device,filename=figDir+figFile,xsize=!A4.x,ysize=!A4.y-15,bits=8,/color,/encapsul  ;A4纸 ： 21cm × 29.7cm
+
+;恢复数据
+restore,peakDataDir+peakDataFile,/ve
+
+;得到的hmiPeakArr磁场数据是转换为Mx单位并除以1e19量级的值
+
+;#test
+Min1,aiaPeakArr 
+Max1,aiaPeakArr 
+
+Min1,hmiPeakArr
+Max1,hmiPeakArr
+;#endtest
+
+;取log
+hmiPeakArr = alog10(hmiPeakArr*1e19)
+aiaPeakArr = alog10(aiaPeakArr)
+
+;作图
+plot,hmiPeakArr,aiaPeakArr,psym=2,yrange=[4.,5.5],xrange=[19.2,20.3],/xstyle,/ystyle, $ 
+     xtitle='log!I10!N(Flux) (Mx)',ytitle='log!I10!N(Intensity) (DN)',charsize=1.8,charthick=6.0
+     
+
+;处理一下最大那个值(省掉)
+hmiPeakArr = hmiPeakArr[sort(hmiPeakArr)]
+aiaPeakArr = aiaPeakArr[sort(aiaPeakArr)]
+
+nEle = n_elements(hmiPeakArr)
+;作拟合
+;fitPars = linfit(hmiPeakArr[0:nEle-2],aiaPeakArr[0:nEle-2]/1e5)
+fitPars = linfit(hmiPeakArr[0:nEle-2],aiaPeakArr[0:nEle-2])
+Say,'k: ',fitPars[1]
+Say,'b: ',fitPars[0]
+tvlct,255,0,0,1 ;Red
+oplot,hmiPeakArr[0:nEle-2],fitPars[0]+hmiPeakArr[0:nEle-2]*fitPars[1],color=1
+
+;关闭PS
+device,/close_file
+set_plot,'x'
+
+Over
+END    

@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+
+<hmi_data project="HMI_BP">
+	<data data_scope="full_disk" time_interval="45s" source="jsoc">
+		<dir>/data1/moucz/HMI_BP/Data/2010.12.31_2011.01.03_full/</dir>
+		<time>2010.12.31_12:00:00-2011.01.04_00:00:00</time>
+	</data>
+</hmi_data>

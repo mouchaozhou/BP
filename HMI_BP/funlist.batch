@@ -1,0 +1,11 @@
+@ ../../../MyIdlPro/mylist.batch
+
+.compile hmiBP_db.pro
+.compile ../../AIA_BP/Program/aiaBP_db.pro
+.compile hmiBP_dll.pro
+
+@hmiBP.in
+Say,'areaNum: ',areaNum
+Say,'wavelength: ',waveLen
+ls
+

@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="gb2312"?>  
+
+<project name="HMI_BP" xmlns="http://www.mou.com/hmi.dtd"
+					   xmlns:aia="http://www.mou.com/aia.dtd">
+	<main>
+		<pro name="hmiBPCropBPs.idl" order="1">
+			<purpose>
+				截出AIA和HMI上相同的区域并消除太阳自转
+			</purpose>
+			<inputDir>
+				<aia:data>Data</aia:data>
+				<data>Data</data>
+			</inputDir>
+			<outputDir>
+				<image>WithContourOfAia</image>				
+				<save>AfterCmp</save>
+				<aia:save>AfterCmp</aia:save>
+			</outputDir>
+		</pro>
+		
+		<pro name="hmiBPFindBox.idl" order="2">
+			<purpose>
+				找出最佳的box的位置(像素)(包裹BP用的box)
+			</purpose>
+			<inputDir>
+				<aia:save>AfterCmp</aia:save>
+				<save>AfterCmp</save>
+			</inputDir>
+			<outputDir>
+				<image>FindBox</image>				
+			</outputDir>
+		</pro>
+		
+		<pro name="hmiBPGetBoxPhys.idl" order="3">
+			<purpose>
+				获取日冕亮点Box中对应的磁场强度及aia数据光变曲线数据
+			</purpose>
+			<inputDir>
+				<aia:save>AfterCmp</aia:save>
+				<save>AfterCmp</save>
+			</inputDir>
+			<outputDir>
+				<save>PhysInbox</save>				
+			</outputDir>
+		</pro>
+		
+		<pro name="hmiBPScanImg.idl" order="4">
+			<purpose>
+				作出成像图和光变曲线图的扫描图
+			</purpose>
+			<inputDir>
+				<aia:save>AfterCmp</aia:save>
+				<save>AfterCmp</save>
+				<save>PhysInbox</save>
+			</inputDir>
+			<outputDir>
+				<image>ScanImg</image>				
+			</outputDir>
+		</pro>
+		
+		<pro name="hmiBPScanImgEx.idl" order="4">
+			<purpose>
+				作出成像图和光变曲线图的扫描图(升级版，作出的图更好看一些)；
+			</purpose>
+			<inputDir>
+				<aia:save>AfterCmp</aia:save>
+				<save>AfterCmp</save>
+				<save>PhysInbox</save>
+			</inputDir>
+			<outputDir>
+				<image>ScanImgEx</image>					
+			</outputDir>
+		</pro>	
+	</main>
+	
+	<auxiliary>
+		<pros role="required">  <!-- 结果中用到的程序 -->
+			<pro name="hmiBP.in" assistPro="all">
+				<purpose>
+					头文件
+				</purpose>
+			</pro>
+		
+			<pro name="hmiBP_db.pro" assistPro="all">
+				<purpose>
+					数据库文件
+				</purpose>
+			</pro>
+		
+			<pro name="hmiBP_dll.pro" assistPro="all">
+				<purpose>
+					子程序集合
+				</purpose>
+			</pro>
+			
+			<pro name="hmiBPCses.xlsx" filetype="Excel">
+				<purpose>
+					记录关于BP的各种参数
+				</purpose>		
+			</pro>
+			
+			<pro name="hmiBPCalLifetime.bas" filetype="VBA">
+				<purpose>
+					在Excel文件hmiBPCses.xlsx中计算BP的寿命
+				</purpose>		
+			</pro>
+			
+			<pro name="hmiBPCasesCancelStat2Num.bas" filetype="VBA">
+				<purpose>
+					在Excel文件hmiBPCses.xlsx中将BP的对消情况量化为数字，方便统计处理
+				</purpose>		
+			</pro>
+			
+			<pro name="hmiBPCalMagDistance.pro">
+				<purpose>
+					测量BP刚开始出现时和AIA达到峰值时两个主极性的距离
+				</purpose>
+				<inputDir>
+					<save>AfterCmp</save>
+					<save>PhysInbox</save>
+				</inputDir>
+				<outputDir>
+					<image>CalMagDistance</image>
+					<save>CalMagDistance</save>
+				</outputDir>			
+			</pro>
+			
+			<pro name="hmiBPDuration.pro">
+				<purpose>
+					计算日冕亮点的寿命（持续时间）			
+				</purpose>
+			</pro>
+			
+			<pro name="hmiBPGetNumByTime.pro">
+				<purpose>
+					将BP的12小时前时刻、起始时刻和结束时刻转化为文件编号			
+				</purpose>
+				<outputDir>					
+					<tmp>Program</tmp>
+				</outputDir>
+			</pro>	
+		</pros>
+		
+		<pros role="explore">	<!-- 结果中没有用到的程序 -->
+			<pro name="hmiBPCropBPMore.pro">
+				<purpose>
+					截出AIA和HMI上相同的区域并消除太阳自转（在BP结束后，继续截取一部分数据），
+					为了研究亮点的起始和结束
+				</purpose>
+				<inputDir>
+					<data>Data</data>
+				</inputDir>
+				<outputDir>
+					<image>WithContourOfAia</image>				
+					<save>AfterCmp</save>
+					<aia:save>AfterCmp</aia:save>
+				</outputDir>			
+			</pro>
+			
+			<pro name="hmiBPGetBoxPhysMore.pro">
+				<purpose>
+					获取日冕亮点Box中对应的磁场强度及aia数据光变曲线数据（在BP结束后，继续截取一部分数据），
+					为了研究亮点的起始和结束
+				</purpose>
+				<inputDir>
+					<aia:save>AfterCmp</aia:save>
+					<save>AfterCmp</save>
+				</inputDir>
+				<outputDir>
+					<save>PhysInbox</save>				
+				</outputDir>
+			</pro>
+		
+			<pro name="hmiBPDiffImage.pro">
+				<purpose>
+					作日冕亮点的差分图			
+				</purpose>
+				<inputDir>
+					<aia:save>AfterCmp</aia:save>
+				</inputDir>
+				<outputDir>
+					<image>DiffImage</image>
+					<save>AfterDiff</save>				
+				</outputDir>
+			</pro>
+
+			<pro name="hmiBPFindLoopPos.pro">
+				<purpose>
+					比较日冕亮点环顶和环底的光变曲线，看看点亮顺序.
+					step 1 : 选出环足点（2个）环顶点(1个)的坐标并作图观看效果（偏不偏）					
+				</purpose>
+				<inputDir>
+					<aia:save>AfterCmp</aia:save>
+					<save>AfterCmp</save>
+				</inputDir>
+				<outputDir>
+					<image>CmpLightCurve</image>
+				</outputDir>
+			</pro>
+			
+			<pro name="hmiBPGetLoopData.pro">
+				<purpose>
+					比较日冕亮点环顶和环底的光变曲线，看看点亮顺序
+					step 2 : 取出环足点（2个）环顶点(1个)的数据					
+				</purpose>
+				<inputDir>
+					<aia:save>AfterCmp</aia:save>
+				</inputDir>
+				<outputDir>
+					<save>LoopData</save>
+				</outputDir>
+			</pro>
+			
+			<pro name="hmiBPLoopLightCurve.pro">
+				<purpose>
+					比较日冕亮点环顶和环底的光变曲线，看看点亮顺序
+					step 3 : 做环足点（2个）和环顶点(1个)的光变曲线并对比					
+				</purpose>
+				<inputDir>
+					<save>LoopData</save>
+				</inputDir>
+				<outputDir>
+					<image>LoopLightCurve</image>
+				</outputDir>
+			</pro>
+			
+			<pro name="hmiBPLoopScan.pro">
+				<purpose>
+					比较日冕亮点环顶和环底的光变曲线，看看点亮顺序
+					step 3 : 做环足点（2个）和环顶点(1个)的扫描图					
+				</purpose>
+				<inputDir>
+					<aia:save>AfterCmp</aia:save>
+					<save>AfterCmp</save>
+					<save>LoopData</save>
+				</inputDir>
+				<outputDir>
+					<image>LoopScan</image>
+				</outputDir>
+			</pro>
+			
+			<pro name="hmiBPMagFitting.pro">
+				<purpose>
+					拟合磁场变化曲线（上升和下降阶段）					
+				</purpose>
+				<inputDir>
+					<save>PhysInbox</save>
+				</inputDir>
+				<outputDir>
+					<image>FittedMagImg</image>
+					<save>FittedMagPars</save>
+				</outputDir>
+			</pro>
+			
+			<pro name="hmiBPFindQuadrupole.pro">
+				<purpose>
+					看看有没有四极场结构，验证模型（文章中的对消模型3）所做的普通图					
+				</purpose>
+				<inputDir>
+					<aia:data>Data</aia:data>
+					<data>Data</data>
+				</inputDir>
+				<outputDir>
+					<image>FindQuadrupole</image>
+					<save>AfterFindQuadrupole</save>
+					<aia:save>AfterFindQuadrupole</aia:save>
+				</outputDir>
+			</pro>
+		</pros>
+		
+		<pros role="test">  <!-- 帮助其他程序工作的程序，也许只用一次，对结果不重要 -->
+			<pro name="hmiBPBoxTestNum.pro" assistPro="hmiBPFindBox.idl">
+				<purpose>
+					取出一个case中的三个合适时刻，查看box是否选取合适（例如BP是否移动到
+					Box之外）
+				</purpose>
+			</pro>
+			
+			<pro name="hmiBPMakeMovie.pro">
+				<purpose>
+					制作三个事件的CmpLightCurve动画
+				</purpose>
+				<inputDir>
+					<image>CmpLightCurve</image>
+				</inputDir>
+				<outputDir>
+					<image>CmpLightCurve</image>
+				</outputDir>
+			</pro>
+			
+			<pro name="hmiBPMkShoMovEv22.pro">
+				<purpose>
+					为22号事件的准备的短动画
+				</purpose>
+				<inputDir>
+					<aia:save>AfterCmp</aia:save>
+				</inputDir>
+				<outputDir>
+					<image>mvImgDir</image>
+				</outputDir>
+			</pro>
+			
+			<pro name="hmiBPCasesChgTextColor.bas" filetype="VBA">
+				<purpose>
+					在Excel文件hmiBPCses.改变BP磁场类型文字的颜色
+				</purpose>		
+			</pro>
+			
+			<pro name="hmiBPShowMovie.htm" filetype="HTML">
+				<purpose>
+					用来方便观看动画
+				</purpose>		
+			</pro>
+			
+			<pro name="rmCmpAiaAndHmiFiles.sh" filetype="Shell">
+				<purpose>
+					删除hmiBPCropBPs.idl生成的数据和图像
+				</purpose>		
+			</pro>
+		</pros>
+	</auxiliary>
+</project>
+	

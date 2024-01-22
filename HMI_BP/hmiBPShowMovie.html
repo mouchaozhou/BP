@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+<body>
+	<script language="javascript">
+		function setSize(){
+			var oimg = document.getElementById("image");
+			var xsize = document.theform.x.value;
+			var ysize = document.theform.y.value;
+			
+			if(xsize == 0){
+				alert("宽度不能为0!");
+				return;
+			}
+
+			if(ysize == 0){
+				alert("高度不能为0!");
+				return;
+			}
+
+			oimg.width = xsize;
+			oimg.height = ysize;
+		}
+
+		function change(){ 
+			document.getElementById("image").src = "../Movie/ScanImg/2010.12.31_2011.01.03_full/211/211_" + document.theform.num.value.toString() + "_scan.gif";
+		}
+	</script>
+
+
+	<form name="theform">
+		事件编号：<input type="text" name="num" size="5">
+		<input type="button" value="选择" onclick="change()">&nbsp;&nbsp;
+		width：<input type="text" name="x" size="5">
+		height：<input type="text" name="y" size="5">
+		<input type="button" value="调整尺寸" onclick="setSize()">	
+	</form>
+
+
+	<img id="image" src="..\Movie\ScanImg\2010.12.31_2011.01.03_full\211\211_1_scan.gif">
+</body>
+</html>

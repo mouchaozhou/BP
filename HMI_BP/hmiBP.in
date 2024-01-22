@@ -1,0 +1,30 @@
+;日期和区域参数
+dateNum = 1          ;时间调节
+;waveLen = '193'     ;波长调节
+waveLen = '211'
+
+areaNum = '1'        ;区域参数调节
+
+;日期
+date = aiaGetDate(dateNum)
+
+;AIA文件名相关参数
+aiaFileHead = 'aia.lev1_euv_12s.'
+aiaymdChar = '-'
+aiaconnChar = 'T'
+aiahmsChar = ''
+
+;HMI文件名相关参数 
+hmiFileHead = 'hmi.M_45s.'
+
+;通用画图参数
+aiaThreshold = aiaGetThreshold(waveLen)
+hmiThreshold = [-70.,70.]
+barPosition = [0.85,0.1,0.88,0.9]
+barColor = GetColour('Yellow') 
+charsize = 1.5
+
+;i0 = 3220  ;22
+;test begin;
+  ;nAia = i0+2
+;endtest;

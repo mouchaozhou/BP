@@ -1,0 +1,36 @@
+;+===========================annotation--begin===================================================
+; 分析table内的数据
+;-===========================annotation--begin===================================================
+
+;Emergence(正极)
+lcEmerg_pos = [1,4,5,6,7,8,9,11,12,14,15,16,17,18,21,22,23,24,25,30,32,34,35,36,37,39,41,44,45,46,48,49,50,51,52,53,54,55,56,57,58,60,62,67,69]
+;Convergence(正极)
+lcConve_pos = [3,10,13,20,33,40,42,43,59,61,64,65,70]
+;Local Combination(正极)
+lcConde_pos = [2,19,26,27,28,29,31,38,47,63,66,68]
+
+;Emergence(负极)
+lcEmerg_neg = [1,3,4,5,6,7,8,11,12,13,14,15,16,17,18,20,21,22,23,24,25,30,32,33,34,35,36,37,39,41,44,45,48,50,51,52,54,55,57,58,59,60,61,65,66,67,69]
+;Convergence(负极)
+lcConve_neg = [2,9,10,27,28,40,42,46,47,49,53,56,62,63,64,68,70]
+;Local Combination(负极)
+lcConde_neg = [19,26,29,31,38,43]
+
+print,'Emergence_pos: ',n_elements(lcEmerg_pos)
+print,'Emergence_neg: ',n_elements(lcEmerg_neg)
+print,'==============================================================='
+print,'Convergence_pos: ',n_elements(lcConve_pos)
+print,'Convergence_neg: ',n_elements(lcConve_neg)
+print,'==============================================================='
+print,'Local Combination_pos: ',n_elements(lcConde_pos)
+print,'Local Combination_neg: ',n_elements(lcConde_neg)
+print,'==============================================================='
+print,'Emergence_Union: ',n_elements(SetUnion(lcEmerg_pos,lcEmerg_neg))
+print,'Convergence_Union: ',n_elements(SetUnion(lcConve_pos,lcConve_neg))
+print,'Local Combination_Union: ',n_elements(SetUnion(lcConde_pos,lcConde_neg))
+print,'==============================================================='
+print,'Emergence_Intersection: ',n_elements(SetIntersection(lcEmerg_pos,lcEmerg_neg))
+print,'Convergence_Intersection: ',n_elements(SetIntersection(lcConve_pos,lcConve_neg))
+print,'Local Combination_Intersection: ',n_elements(SetIntersection(lcConde_pos,lcConde_neg))
+
+END

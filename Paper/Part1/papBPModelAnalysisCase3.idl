@@ -1,0 +1,294 @@
+;+===========================annotation--begin===================================================
+; 画点亮机制模型的实例图(特别针对实例3)
+;-===========================annotation--begin===================================================
+
+@papBP.in
+@papBPContourPar.in
+
+;实例选择 3
+nCase = '3'
+
+defsysv,'!ps_x',!A4.x
+defsysv,'!ps_y',!A4.y-15  ;待定
+
+;打开PS
+set_plot,'PS'
+
+;创建对象
+oHmiData = obj_new('HMI') 
+oAiaData = obj_new('AIA',fix(waveLen))
+
+;获得画图实例的相关参数
+papBPGetModelPars,nCase,areaNum=areaNum,arrSelTime=arrSelTime,needArea=needArea
+
+;输入路径和输入文件
+aiaSavDir = '../../AIA_BP/Save/AfterCmp/'  + date + '/' + wavelen + '/' + areaNum + '/'
+hmiSavDir = '../../HMI_BP/Save/AfterCmp/' + date + '/' + wavelen + '/' + areaNum + '/'
+hmiSavFile = '*.sav' 
+;为了或得arrTime参数
+hmiInboxDir = '../../HMI_BP/Save/PhysInbox/' + date + '/' + wavelen + '/' + areaNum + '/'
+hmiInboxFile = '*.sav'
+
+;输出路径
+figDir = MakeDir('../Document/Figure/')
+figFile = 'papBPModelAnysis_' + nCase + '_.eps'
+device,filename=figDir+figFile,xsize=!ps_x,ysize=!ps_y,bits=8,/color,/encapsul  ;A4纸 ： 21cm × 29.7cm
+
+;设置搜索文件的相关参数
+oAiaData->SetProperty,inputDir=aiaSavDir
+oHmiData->SetProperty,inputDir=hmiSavDir,inputFile=hmiSavFile
+
+;搜索文件 
+oHmiData->FileSearch
+;获得找到后的文件个数
+oHmiData->GetProperty,fileArr=hmiFileArr
+
+;恢复sav中存放的数据(曲线数据)
+hmiBPGetBoxSavData,hmiInboxDir+hmiInboxFile,arrTime=arrTime
+
+;根据算选事件取出相应的文件index
+nSelTime = n_elements(arrSelTime)
+fileIndex = intarr(nSelTime)
+for i=0,nSelTime-1 do begin
+    fileIndex[i] = WhereEx(arrSelTime[i] eq arrTime)
+endfor 
+
+;画图位置设置
+n = 4  ;列数
+m = 2  ;行数
+
+;获得画图的位置
+papBPGetModelCoords,nCase,needArea,n,m,x0=x0,y0=y0,x1=x1,y1=y1, $
+                    dx=dx,dy=dy,yy0=yy0,yy1=yy1,ix=ix,iy=iy
+                    
+;设置画图参数
+oHmiData->SetProperty,threshold=hmiThreshold,charsize=1.0,needArea=needArea 
+oAiaData->SetProperty,threshold=papBPGetAiaThresholdModel(nCase),needArea=needArea
+charthick = 3
+                   
+;再开始画hmi磁场图
+papBPGetModelLables,nCase,xlabel=xlabel,ylabel=ylabel,xnolab=xnolab,ynolab=ynolab  ;自定义坐标轴
+hsize = 200.0  ;箭头的大小
+thick = 4  ;箭头、方框、圆圈的厚度
+
+;aia contour参数
+Bmin = 150.
+Cmin = 50.
+
+;获得每个磁图上的箭头和圆圈坐标
+papBPGetModelSymbol,nCase,posCircleCord=posCircleCord,negCircleCord=negCircleCord, $
+                    posArrowCord=posArrowCord,negArrowCord=negArrowCord 
+szPosCircleCord = size(posCircleCord,/dimensions)
+szNegCircleCord = size(negCircleCord,/dimensions)
+szPosArrowCord = size(posArrowCord,/dimensions)
+szNegArrowCord = size(negArrowCord,/dimensions)                   
+
+jetNum = 2 ;jet出现的图片编号
+                  
+for i=0,nSelTime-1 do begin
+    ;hmi的处理------------------------------------------------------------------------------------------------------------
+    ;读入hmi数据
+    restore,hmiFileArr[fileIndex[i]],/ve 
+         
+    ;设置相应数据        
+    oHmiData->SetProperty,map=hmiMap
+    
+    ;截出黄色方框内的数据
+    oHmiData->SubMap,/pixel
+    
+    ;把map数据给data,准备画image
+    oHmiData->Map2Data
+    
+    if (i eq 0) then begin 
+        ;保存第一次的截取之后的map,准备画x坐标时使用
+        oHmiData->GetProperty,map=hmiMap0 
+        save,hmiMap0,filename=MakeDir('../Save/Coords/'+date+wavelen+'/'+areaNum+'/')+areaNum+'_coords_.sav'
+    endif   
+    ;--------------------------------------------------------------------------------------------------------------------
+    
+    ;aia的处理------------------------------------------------------------------------------------------------------------
+    ;从Hmi挑出与Aia符合的图
+    oHmiData->GetFnamTime,hmiFileHead,i=fileIndex[i],Year=Year,Month=Month,Day=Day,Hour=Hour,Minute=Minute
+    aiaSavFile = strcompress(aiaFileHead + Year + AiaymdChar + Month + AiaymdChar + Day + AiaconnChar + $
+                             Hour + AiahmsChar + Minute + '*.sav',/remove_all)  ;获取hmi文件中的小时和分钟传递给aia用来读取数据
+                          
+    ;搜索aia数据
+    oAiaData->SetProperty,inputFile=aiaSavFile
+    oAiaData->FileSearch 
+    oAiaData->GetProperty,FileArr=aiaFileArr
+    
+    ;读入aia数据 
+    restore,aiaFileArr[0],/ve 
+
+    aiaMap.data ^= 1.2
+    oAiaData->SetProperty,map=aiaMap
+    ;oAiaData->DExprTime      ;消除曝光时间的影响 ，只处理Map的数据
+    
+    ;截出黄色方框内的数据
+    oAiaData->SubMap,/pixel
+    
+    ;把map数据给data
+    oAiaData->Map2Data
+    
+    ;图像反转
+    oAiaData->ImageNegatives
+    ;--------------------------------------------------------------------------------------------------------------------
+    
+    ;画图
+    loadct,0
+    
+    if ((i mod n) eq 0) then begin
+        ;x重置
+        papBPGetModelCoords,nCase,needArea,n,m,xx0=xx0,xx1=xx1
+                
+        ;y降低
+        if (i ne 0) then begin  
+            yy1 = yy0 - iy 
+            yy0 = yy1 - dy
+        endif
+    endif $
+    else begin
+        ;x增加
+        xx0 = xx1 + ix 
+        xx1 = xx0 + dx 
+    endelse 
+       
+    ;因为都用初始时刻坐标,所以先画图
+    if (i lt 4) then begin  ;第一列画aia
+        oAiaData->PlotImage,/onlyData,/noerase,position=[xx0,yy0,xx1,yy1]
+        ;画hmi的contour
+        loadct,3 ;黑-蓝-白
+        oHmiData->Data2Contour,polarity='pos'  ;将消除曝光时间后的数据给contour
+        oHmiData->Contour,c_colors=cntorCcolorsMagP,levels=cntorLevelsMagP,position=[xx0,yy0,xx1,yy1]
+        loadct,1 ;黑-红-白
+        oHmiData->Data2Contour,polarity='neg'
+        oHmiData->Contour,c_colors=cntorCcolorsMagN,levels=cntorLevelsMagN,position=[xx0,yy0,xx1,yy1]
+        
+        loadct,0
+    endif $
+    else begin ;第二列画aia
+        oHmiData->PlotImage,/onlyData,/noerase,position=[xx0,yy0,xx1,yy1]
+    endelse
+    oHmiData->SetProperty,map=hmiMap0
+    
+    ;标注时间
+    if (i lt 4) then $
+        xyouts,xx0+0.01,yy1-0.04,papBPFormatTime(arrTime[fileIndex[i]]), $
+               charsize=1.2,/normal,color=0,charthick=3
+                       
+    tvlct,0,0,255,1    ;Blue 
+    tvlct,255,255,0,2  ;Yellow 
+    tvlct,0,255,0,3    ;Green 
+    
+    ;画箭头和圆圈
+    ;AIA
+    if (i eq jetNum) then begin
+        jetCoords =  [43,31, $
+                      44,33, $
+                      45,36, $
+                      47,37, $
+                      49,37, $
+                      51,38, $
+                      51,41, $
+                      50,44, $
+                      48,46, $
+                      46,49, $
+                      45,52, $
+                      44,53, $
+                      41,54, $
+                      40,56, $
+                      38,57, $
+                      36,60, $
+                      36,62, $
+                      37,65, $
+                      36,67, $
+                      34,69, $
+                      19,68, $
+                      16,66, $
+                      14,65, $
+                      13,63, $
+                      13,60, $
+                      15,58, $
+                      16,56, $
+                      16,53, $
+                      15,51, $
+                      14,49, $
+                      14,46, $
+                      16,44, $
+                      21,43, $
+                      25,42, $
+                      27,42, $
+                      30,40, $
+                      31,38  ]
+        nCoords = n_elements(jetCoords)
+        xCoord = intarr(nCoords/2)
+        yCoord = intarr(nCoords/2)
+        print,nCoords
+        for l=0,nCoords-1 do begin
+            if ((l mod 2) eq 0) then begin
+                xCoord[l/2] = jetCoords[l] 
+            endif $
+            else begin
+                yCoord[fix(l/2)] = jetCoords[l]
+            endelse
+        endfor
+        plots,xCoord,yCoord,color=1,thick=thick 
+    endif
+    ;HMI
+    k = i - 4
+    if (i ge 4) then begin
+        for j=0,szPosArrowCord[0]-1,4 do begin
+            if (posArrowCord[j,k] ne -1) then $
+                arrow,posArrowCord[j,k],posArrowCord[j+1,k],posArrowCord[j+2,k],posArrowCord[j+3,k],/data,hsize=hsize,thick=thick,color=3
+        endfor
+        for j=0,szNegArrowCord[0]-1,4 do begin
+            if (negArrowCord[j,k] ne -1) then $    
+                arrow,negArrowCord[j,k],negArrowCord[j+1,k],negArrowCord[j+2,k],negArrowCord[j+3,k],/data,hsize=hsize,thick=thick,color=2
+        endfor
+        for j=0,szPosCircleCord[0]-1,3 do begin   
+            if (posCircleCord[j,k] ne -1) then $ 
+                draw_circle,posCircleCord[j,k],posCircleCord[j+1,k],posCircleCord[j+2,k],color=1,thick=thick
+        endfor
+        for j=0,szNegCircleCord[0]-1,3 do begin
+            if (negCircleCord[j,k] ne -1) then $ 
+                draw_circle,negCircleCord[j,k],negCircleCord[j+1,k],negCircleCord[j+2,k],color=2,thick=thick
+        endfor
+    endif
+    
+    loadct,0
+  
+    ;再根据情况画坐标轴     
+    if ((i mod n) eq 0) then begin  ;处理每行开始的第一个 
+        if (i lt (m*n-n)) then begin  
+            oHmiData->PlotMap,/noerase,position=[xx0,yy0,xx1,yy1],/notitle,/no_data,xtitle='',xtickname=xnolab,ytickname=ylabel,charthick=charthick           
+            ;test begin;   测试找出正确的label的
+                  ;oHmiData->PlotMap,/noerase,position=[xx0,yy0,xx1,yy1],/notitle,/no_data,xtitle=''
+                  ;goto,Finish
+            ;endtest;
+        endif $
+        else begin  ;处理最后一行第一个
+            oHmiData->PlotMap,/noerase,position=[xx0,yy0,xx1,yy1],/notitle,/no_data,xtickname=xlabel,ytickname=ylabel,charthick=charthick 
+        endelse
+    endif $
+    else begin  ;处理每行开始的除一个以外的其它图 
+        if (i lt (m*n-n)) then begin
+            oHmiData->PlotMap,/noerase,position=[xx0,yy0,xx1,yy1],/notitle,/nolabels,xtickname=xnolab,ytickname=ynolab,/no_data,charthick=charthick
+        endif $
+        else begin  ;处理最后一行
+            oHmiData->PlotMap,/noerase,position=[xx0,yy0,xx1,yy1],/notitle,ytitle='',xtickname=xlabel,ytickname=ynolab,/no_data,charthick=charthick
+        endelse
+    endelse
+endfor
+
+Finish:
+
+;销毁对象
+obj_destroy,oHmiData 
+obj_destroy,oAiaData
+
+;关闭PS
+device,/close_file
+set_plot,'x'
+
+Over
+END                          

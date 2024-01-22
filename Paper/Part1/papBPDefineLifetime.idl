@@ -1,0 +1,122 @@
+;+===========================annotation--begin===================================================
+; 定义BP的寿命
+;-===========================annotation--begin===================================================
+@papBP.in
+
+step1 = ~!true
+step2 = ~step1
+
+;输出路径
+figDir = MakeDir('../Image/DefineLifetime/'+ date + '/' + waveLen + '/')
+savDir = MakeDir('../Save/DefineLifetime/'+ date + '/' + waveLen + '/')
+savFile1 = 'DefineLifetime_quietRegionVal.txt'
+savFile2 = 'DefineLifetime_bpIntenMeanVal.txt'
+
+;step 1 : 取出一片宁静区求平均值   
+if (step1) then begin  
+    ;创建对象
+    oAiaData = obj_new('AIA',fix(waveLen)) 
+    ;导入aia的色表
+    oAiaData->Lct,waveLen=1600
+    ;输入路径和输入文件
+    aiaDir = '/data1/moucz/AIA_BP/Data/' + date + '/' + waveLen + '/'
+    aiaFile = 'aia.lev1*.fits'
+    ;画图参数
+    xsize = 1000 
+    ysize = xsize
+    ;设置搜索文件的相关参数
+    oAiaData->SetProperty,inputDir=aiaDir,inputFile=aiaFile,outputDir=figDir
+    ;搜索文件 
+    oAiaData->FileSearch 
+    ;设置画图参数
+    oAiaData->SetProperty,threshold=aiaGetThreshold(waveLen),position=[0.1,0.1,0.9,0.9]
+    ;读入aia数据
+    oAiaData->ReadData,0,/prep 
+    ;取出宁静区的区域（手动）
+    device,decomposed=0
+    window,0,xsize=xsize,ysize=ysize,retain=2
+    oAiaData->PlotImage
+    ;消除曝光时间的影响,很重要
+    oAiaData->Index2Map
+    oAiaData->DExprTime  
+    oAiaData->Map2Data
+    ;手动截取一块区域 
+    print,'请截取一块区域...'
+    cropArea = CursorCrop(/data,/info)  ;用鼠标截取一块区域
+    ;画出刚取出的区域
+    oAiaData->SetProperty,needArea=cropArea
+    device,decomposed=1
+    oAiaData->PlotBox,color=GetColour('Blue')
+    oAiaData->GetProperty,data=aiaData
+    quietRegionVal = Means(aiaData[cropArea[0]:cropArea[1],cropArea[2]:cropArea[3]])     
+    print,'宁静区的平均值为： ',quietRegionVal
+    yes_no,'觉得区域满意就按y继续，否则按回车或n中断程序',answer,'n'  ;最后一个是按回车的默认选项
+    if (answer eq 0) then $
+        Dbg,'程序中止！',/sp
+    oAiaData->SavImage       
+    openw,lun,savDir+savFile1,/get_lun
+    printf,lun,quietRegionVal
+    free_lun,lun
+    ;销毁对象
+    obj_destroy,oAiaData      
+endif
+
+;step 2 取出每个事件box中AIA的数据，再取出亮点开始时的那个并做平均
+if (step2) then begin  
+    oHmiData = obj_new('HMI')  ;这里搜索hmi的数据是为了获取文件名中的时间信息
+    hmiDir = '/data1/moucz/HMI_BP/Data/' + date +'/'
+    hmiFile = hmiFileHead + '*.fits'
+    ;搜索文件 
+    oHmiData->SetProperty,inputDir=hmiDir,inputFile=hmiFile
+    oHmiData->FileSearch
+    oHmiData->GetProperty,fileArr=hmiFileArr,nFiles=nHmi
+    
+    quietRegionVal = 0.
+    openr,lun,savDir+savFile1,/get_lun
+    readf,lun,quietRegionVal
+    free_lun,lun
+     
+    nLastCase = 70
+    bpIntenMeanVal = fltarr(nLastCase)  ;Box中的亮度平均值
+    IntenRatio = fltarr(nLastCase)  ;Box中的亮度平均值与宁静区平均值的比值    
+    
+    openw,lun,savDir+savFile2,/get_lun
+ 
+    for i=1,nLastCase do begin
+    ;for i=1,1 do begin
+        areaNum = ItoA(i)
+        ;输入路径和输入文件(hmiBPGetBoxPhys)
+        hmiInboxDir = '/space1/moucz2/HMI_BP/Save/PhysInbox/' + date + '/' + waveLen + '/' + areaNum + '/'
+        hmiInboxFile = '*.sav'
+        ;恢复sav中存放的数据
+        hmiBPGetBoxSavData,hmiInboxDir+hmiInboxFile,arrTime=arrTime,Intensity=Intensity,/info
+        ;得到Box的坐标
+        needArea = hmiGetBoxCoord(areaNum) ;Box的坐标
+        ;得到初始时刻
+        hmiGetEvtNum,date,areaNum,refNum=refNum
+        ;获得该时刻文件名的时间信息
+        oHmiData->GetFnamTime,HmiFileHead,i=refNum,Year=Year,Month=Month,Day=Day,Hour=Hour,Minute=Minute
+        ;合成时间字符串
+        if (fix(Day) eq 31) then begin
+            strTime = Day + '-' + get_month(fix(Month)-1,/truncate) + '-' + Year + ' ' + Hour + ':' + Minute
+        endif $
+        else begin
+            strTime = ' ' + IToA(fix(Day)) + '-' + get_month(fix(Month)-1,/truncate) + '-' + Year + ' ' + Hour + ':' + Minute
+        endelse
+        ;取出相应的时间值
+        arrTimeTrun = strmid(arrTime,0,strlen('31-Dec-2010 17:49'))
+        ;判断并取出相应时刻的强度
+        startIntensity = Intensity[WhereEx(strTime eq arrTimeTrun)]  
+        ;Box中的亮度平均值
+        bpIntenMeanVal[i-1] = startIntensity / ((needArea[1]-needArea[0]+1)*(needArea[3]-needArea[2]+1))
+        ;Box中的亮度平均值与宁静区平均值的比值
+        IntenRatio[i-1] = bpIntenMeanVal[i-1] / quietRegionVal
+        printf,lun,bpIntenMeanVal[i-1],IntenRatio[i-1] 
+    endfor
+    printf,lun,'====================================================================='
+    printf,lun,Means(bpIntenMeanVal),Means(IntenRatio)
+    free_lun,lun                    
+endif
+
+Over
+END

@@ -1,0 +1,64 @@
+;+===========================annotation--begin===================================================
+; :Purpose:
+;    生成搜索BP的区域图
+; :Author: Chaozhou Mou
+;-===========================annotation--end======================================================
+@papBP.in
+
+;打开PS
+set_plot,'PS'
+
+;创建对象
+oAiaData = obj_new('AIA',fix(waveLen)) 
+
+;导入aia的色表
+oAiaData->Lct
+
+;AIA的输入路径和输入文件
+aiaDir = '/data1/moucz/AIA_BP/Data/' + date + '/' + waveLen + '/'
+aiaFile = aiaFileHead + '*.fits'
+
+;输出路径
+figDir = '../Document/Figure/'
+device,filename=figDir+'paperSearchRegion.eps',xsize=21,ysize=21,/color,bits=8,/encapsul  ;A4纸 ： 21cm × 29.7cm
+
+;设置搜索文件的相关参数
+oAiaData->SetProperty,inputDir=aiaDir,inputFile=aiaFile,outputDir=figDir
+;搜索文件 
+oAiaData->FileSearch 
+
+;画图参数
+position=[0.07,0.07,1.0,0.95]
+
+;设置画图参数
+oAiaData->SetProperty,threshold=papBPGetAiaThreshold('1'),charsize=charsize,position=position
+
+;已找出的位置
+arrNeedArea = aiaGetFindBPsPar(/all)
+             
+;画图
+oAiaData->ReadData,0,/prep 
+oAiaData->Index2Map 
+oAiaData->PlotMap
+
+szNeedArea = size(arrNeedArea,/dimensions)
+
+;xloadct可用来查看色表情况  xloadct
+;值从小到大：黑 ->紫->蓝->青->绿->黄->橙->红->白
+tvlct,0,0,255,1  ;Blue 
+
+for i=0,szNeedArea[1]-1 do begin
+    oAiaData->SetProperty,needArea=arrNeedArea[*,i]
+    oAiaData->PlotBox,color=1
+    xyouts,arrNeedArea[0,i],arrNeedArea[2,i],IToA(i+1),charsize=1.5,color=1    
+endfor
+
+;销毁对象
+obj_destroy,oAiaData 
+
+;关闭PS
+device,/close_file
+set_plot,'x'
+ 
+Over
+END

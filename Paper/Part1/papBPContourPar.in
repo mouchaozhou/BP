@@ -1,0 +1,13 @@
+;hmi contour参数
+btColorIndex = 100.
+tpColorIndex = 150.
+;正极
+MpBmin = 30. & MpBmax = 100. & nMpB = 10.
+cntorLevelsMagP = GradeArr(MpBmin,nMpB,MpBmax)
+MpCmin = btColorIndex & MpCmax = tpColorIndex & nMpC = (MpCmax-MpCmin)*nMpB/(MpBmax-MpBmin)
+cntorCcolorsMagP = GradeArr(MpCmin,nMpC,MpCmax)
+;负极
+MnBmin = -100. & MnBmax = -30. & nMnB = 10.
+cntorLevelsMagN = GradeArr(MnBmin,nMnB,MnBmax)
+MnCmin = btColorIndex & MnCmax = tpColorIndex & nMnC = (MnCmax-MnCmin)*nMnB/(MnBmax-MnBmin)
+cntorCcolorsMagN = GradeArr(MnCmin,nMnC,MnCmax)

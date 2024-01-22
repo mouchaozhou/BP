@@ -1,0 +1,139 @@
+;+===========================annotation--begin===================================================
+; This is a main program
+;
+; :Purpose:
+;    为文献做动画图
+;
+; :Author: Chaozhou Mou
+;-===========================annotation--end======================================================
+;PRO main
+@../../HMI_BP/Program/hmiBP.in
+@papBPContourPar.in
+
+oHmiData = obj_new('HMI')  
+oHmiCord = obj_new('HMI')  ;设置坐标轴
+oAiaData = obj_new('AIA',fix(waveLen)) 
+
+;输入路径和输入文件(hmiBPGetBoxPhys)
+aiaSavDir = '../../AIA_BP/Save/AfterCmp/'  + date + '/' + wavelen + '/' + areaNum + '/'
+hmiSavDir = '../../HMI_BP/Save/AfterCmp/' + date + '/' + wavelen + '/' + areaNum + '/'
+hmiSavFile = '*.sav' 
+hmiInboxDir = '../../HMI_BP/Save/PhysInbox/' + date + '/' + wavelen + '/' + areaNum + '/'
+hmiInboxFile = '*.sav'
+
+;恢复sav中存放的时间数组
+hmiBPGetBoxSavData,hmiInboxDir+hmiInboxFile,arrTime=arrTime
+
+;定义输出路径
+imgDir = MakeDir('../Image/ImgForMovie/' + date + '/' + wavelen + '/' + areaNum + '/') ;画出位置（画圆）
+
+;goto,make_movie
+
+;设置搜索文件的相关参数
+oAiaData->SetProperty,inputDir=aiaSavDir
+oHmiData->SetProperty,inputDir=hmiSavDir,inputFile=hmiSavFile,outputDir=imgDir
+
+;搜索文件 
+oHmiData->FileSearch
+;获得找到后的文件个数
+oHmiData->GetProperty,fileArr=hmiFileArr,nFiles=nHmi
+
+;设置画图参数
+papBPGetArea,areaNum,newArea=newArea ;新面积
+oAiaData->SetProperty,threshold=aiaThreshold,charsize=1.0
+oHmiData->SetProperty,threshold=hmiThreshold,charsize=1.0
+xsize = 1400
+ysize = 700
+
+;或得第一幅图的开始位置
+beginNum = Arr0(papBPGetMovBeginNum(areaNum,arrTime))  ;where返回的是数组(虽然只有一个元素)，用Arr0化成变量
+
+;恢复画figure坐标轴中所使用的map
+restore,'../Save/Coords/'+date+wavelen+'/'+areaNum+'/'+areaNum+'_coords_.sav',/ve  
+
+;test beign;
+  ;nHmi = beginNum + 1
+;endtest;
+for i=beginNum,nHmi-1 do begin  
+    ;读入hmi数据
+    restore,hmiFileArr[i],/ve 
+          
+    ;设置相应数据        
+    oHmiData->SetProperty,map=hmiMap,needArea=newArea   ;设置新区域
+      
+    ;截取数据
+    oHmiData->SubMap,/pixel 
+    ;把map数据给data,准备画image
+    oHmiData->Map2Data
+                 
+    ;从Hmi挑出与Aia符合的图
+    oHmiData->GetFnamTime,hmiFileHead,i=i,Year=Year,Month=Month,Day=Day,Hour=Hour,Minute=Minute
+    aiaSavFile = strcompress(aiaFileHead + Year + AiaymdChar + Month + AiaymdChar + Day + AiaconnChar + $
+                             Hour + AiahmsChar + Minute + '*.sav',/remove_all)  ;获取hmi文件中的小时和分钟传递给aia用来读取数据
+                          
+    ;搜索aia数据
+    oAiaData->SetProperty,inputFile=aiaSavFile
+    oAiaData->FileSearch 
+    oAiaData->GetProperty,nFiles=nAia,FileArr=aiaFileArr
+         
+    ;读入aia数据
+    nAia = 1  ;时间间隔取1min
+    for j=0,nAia-1 do begin
+        restore,aiaFileArr[j],/ve 
+           
+        oAiaData->SetProperty,map=aiaMap,needArea=newArea   ;设置新区域
+        oAiaData->DExprTime       ;消除曝光时间的影响 
+        ;截取数据
+        oAiaData->SubMap,/pixel
+        oAiaData->Map2Data        ;不加这句处理曝光时间后的数据只是map数据，不是data数据     
+        oAiaData->ImageNegatives  ;图像反转
+        
+        ;/********** 画在一幅图中  **********/
+        window,1,xsize=xsize,ysize=ysize,retain=2
+        
+        ;画hmi磁场图
+        loadct,0
+        oHmiData->SetProperty,position=[0.525,0.05,0.975,0.95]      
+        oHmiData->PlotImage,/onlyData,/noerase  
+        ;画角秒坐标轴   
+        hmiMap0.id = hmiMap.id
+        hmiMap0.time = hmiMap.time 
+        oHmiCord->SetProperty,map=hmiMap0,position=[0.525,0.05,0.975,0.95]
+        oHmiCord->PlotMap,/no_data,/noerase
+        
+        
+        ;画叠加了hmi磁场的aia图
+        oAiaData->SetProperty,position=[0.03,0.05,0.48,0.95],threshold=papBPGetMovThreshold(areaNum)        
+        oHmiData->SetProperty,position=[0.03,0.05,0.48,0.95]
+        oAiaData->PlotImage,/onlyData,/noerase
+        ;画hmi的contour
+        loadct,3 ;黑-蓝-白
+        oHmiData->Data2Contour,polarity='pos'  ;将消除曝光时间后的数据给contour
+        oHmiData->Contour,c_colors=cntorCcolorsMagP,levels=cntorLevelsMagP
+        loadct,1 ;黑-红-白
+        oHmiData->Data2Contour,polarity='neg'
+        oHmiData->Contour,c_colors=cntorCcolorsMagN,levels=cntorLevelsMagN
+        ;画角秒坐标轴     
+        hmiMap0.id = aiaMap.id
+        hmiMap0.time = aiaMap.time
+        oHmiCord->SetProperty,map=hmiMap0,position=[0.03,0.05,0.48,0.95]  
+        oHmiCord->PlotMap,/no_data,/noerase
+        
+        ;存储图片
+        write_png,imgDir+string(i,'(I5.5)')+'.png',tvrd(true=1)
+    endfor
+endfor
+
+;制作GIF动画
+make_movie:
+Say,'Making movie...'
+oHmiData->SetProperty,inputDir=imgDir,inputFile='*.png',outputDir=imgDir
+oHmiData->MakeMovie,gifName=waveLen+'_'+areaNum+'_mov.gif'
+ 
+;销毁对象
+obj_destroy,oHmiData
+obj_destroy,oHmiCord
+obj_destroy,oAiaData
+Say,'areaNum: ',areaNum
+Over
+END

@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+
+<!-- AIA DATA -->
+
+<aia_data project="AIA_BP">
+	<data wavelength="211" datatype="full_disk" time_interval="12s" source="jsoc">
+		<dir> /data1/moucz/AIA_BP/Data/2010.12.31_2011.01.03_full/211/</dir>
+		<time>2010.12.31_12:00:00-2011.01.04_00:00:00</time>
+	</data>
+	
+	<data wavelength="193" datatype="full_disk" time_interval="12s" source="jsoc">
+		<dir>/data1/moucz/AIA_BP/Data/2010.12.31_2011.01.03_full/193/</dir>
+		<time>2010.12.31_12:00:00-2011.01.04_00:00:00</time>
+	</data>
+	
+	<data wavelength="335" datatype="full_disk" time_interval="12s" source="jsoc">
+		<dir>/data1/moucz/AIA_BP/Data/2010.12.31_2011.01.03_full/335/</dir>
+		<time>2011.01.01_03:31:00-2011.01.01_03:42:00</time>
+	</data>
+	
+	<data wavelength="94" datatype="full_disk" time_interval="12s" source="jsoc">
+		<dir>/data1/moucz/AIA_BP/Data/2010.12.31_2011.01.03_full/94/</dir>
+		<time>2011.01.01_03:31:00-2011.01.01_03:42:00</time>
+	</data>
+</aia_data>

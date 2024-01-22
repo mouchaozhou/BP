@@ -1,0 +1,13 @@
+
+
+.compile ../../HMI_BP/Program/hmiBP_db.pro
+.compile aiaBP_db.pro
+
+
+@ ../../../MyIdlPro/mylist.batch
+
+@aiaBP.in
+
+Say,'nArea: ',nArea
+
+ls

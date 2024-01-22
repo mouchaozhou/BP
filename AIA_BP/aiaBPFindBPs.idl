@@ -1,0 +1,121 @@
+;+===========================annotation--begin===================================================
+; This is a main program
+;
+; :Purpose:
+;     寻找aia图上的BP
+;
+; :Author: Chaozhou Mou
+;-===========================annotation--end======================================================
+;Pro main
+@aiaBP.in
+
+;设置区域
+manuProc = !true
+;manuProc = !false
+
+;创建对象
+oAiaData = obj_new('AIA',fix(waveLen)) 
+
+;导入aia的色表
+oAiaData->Lct,waveLen=1600
+
+;输出路径
+figDir = MakeDir('../Figure/FindBPs/'+ date + '/' + waveLen + '/' + nArea + '/')
+
+;画图参数
+xsize = 1000 
+ysize = xsize
+
+;设置搜索文件的相关参数
+oAiaData->SetProperty,inputDir=aiaDir,inputFile=aiaFile,outputDir=figDir
+;搜索文件 
+oAiaData->FileSearch 
+;获得找到后的文件个数
+oAiaData->GetProperty,nFiles=nAia 
+
+;设置画图参数
+oAiaData->SetProperty,threshold=aiaThreshold,barPosition=barPosition,barColor=barColor,charsize=charsize,position=position
+
+;读入aia数据
+oAiaData->ReadData,0,/prep 
+oAiaData->Index2Map
+ 
+if (manuProc) then begin
+    ;已找出的位置
+    arrNeedArea = aiaGetFindBPsPar(/all)
+    szNeedArea = size(arrNeedArea,/dimensions)
+    
+    ;获得第一幅图的区域（手动）
+    window,0,xsize=xsize,ysize=ysize,retain=2
+    oAiaData->PlotMap,/colbar
+    
+    ;画出已取到的区域
+    device,decomposed=1
+    for i=0,szNeedArea[1]-1 do begin
+        oAiaData->SetProperty,needArea=arrNeedArea[*,i]
+        oAiaData->PlotBox,color=GetColour('Yellow')
+        xyouts,arrNeedArea[0,i],arrNeedArea[2,i],IToA(i+1),charsize=2.0,color=GetColour('Yellow')
+    endfor
+   
+    
+    ;手动截取一块区域 
+    print,'请截取一块区域...'
+    cropArea = CursorCrop(/data,/info)  ;用鼠标截取一块区域
+    ;画出刚取出的区域
+    oAiaData->SetProperty,needArea=cropArea
+    oAiaData->PlotBox,color=GetColour('Blue')
+    xyouts,cropArea[0],cropArea[2],nArea,charsize=2.0,color=GetColour('Blue')
+    Wt  ;暂停一下，看看刚选的位置在全日面图上的情况
+    device,decomposed=0
+endif $
+else begin
+    cropArea = aiaGetFindBPsPar(nArea=nArea)
+endelse
+
+;获取消除太阳自传参数
+oAiaData->GetDRotRefPar,/subMap,cropPar=cropArea
+oAiaData->DRotate
+
+;设置画图坐标
+oAiaData->SetProperty,position=Area2Pos(cropArea,y1=0.1)
+
+;画出样品图
+if (manuProc) then begin
+    erase   
+    oAiaData->PlotMap,/colbar
+    ;判断区域是否满意
+    yes_no,'觉得区域满意就按y继续，否则按回车或n中断程序',answer,'n'  ;最后一个是按回车的默认选项
+    if (answer eq 0) then $
+        Dbg,'程序中止！',/sp
+endif
+
+;写入获得的坐标
+cropArea = ItoA(cropArea)  ;转化为字符串
+coordFile = FigDir+'coordinates.xml'
+file_delete,coordFile,/allow_nonexistent
+openu,lun,coordFile,/get_lun,/append
+printf,lun,nArea
+printf,lun,'[',cropArea[0],',',cropArea[1],',',cropArea[2],',',cropArea[3],']'
+printf,lun,''
+free_lun,lun 
+
+;#TEST; NumAia = 1 
+tIntv = 10;(min)  ;时间间隔 min  
+for i=0,nAia-1,5*tIntv do begin ;5幅图1分钟  
+    oAiaData->ReadData,i,/prep
+    oAiaData->Index2Map
+    ;太阳自传消除并截取相同区域
+    oAiaData->DRotate
+    window,1,xsize=xsize,ysize=ysize,retain=2
+    oAiaData->PlotMap,/colbar 
+    oAiaData->SavImage,description=string(i)
+endfor
+
+;制作GIF动画
+;oAiaData->SetProperty,inputDir=figDir,inputFile='*.png'
+;oAiaData->MakeMovie,gifName=waveLen+'_'+nArea+'.gif'
+ 
+;销毁对象
+obj_destroy,oAiaData  
+Over
+END

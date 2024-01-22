@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="gb2312"?>  
+
+<project name="AIA_BP">
+	<main>
+		<pro name="aiaBPFindBPs.idl" order="1">
+			<purpose>
+				截出AIA上一块较大的区域方便寻找BP
+			</purpose>
+			<inputDir>
+				<data>Data</data>
+			</inputDir>
+			<outputDir>
+				<image>FindBPs</image>				
+			</outputDir>
+		</pro>
+	</main>
+	
+	<auxiliary>
+		<pros role="required">  <!-- 结果中用到的程序 -->
+			<pro name="aiaBP.in" assistPro="all">
+				<purpose>
+					头文件
+				</purpose>
+			</pro>
+		
+			<pro name="aiaBP_db.pro" assistPro="all">
+				<purpose>
+					数据库文件
+				</purpose>
+			</pro>	
+		</pros>
+		
+		<pros role="test">  <!-- 帮助其他程序工作的程序，也许只用一次，对结果不重要 -->
+			<pro name="aiaBPChkArea.pro">
+				<purpose>
+					检查我们所选的subregion在全日面图上的分布情况
+				</purpose>
+				<inputDir>
+					<data>Data</data>
+				</inputDir>
+				<outputDir>
+					<image>FindBPs</image>				
+				</outputDir>
+			</pro>
+			
+			<pro name="aiaBPChkBPs.pro">
+				<purpose>
+					检查我们所选的BP在subregion上的分布情况
+				</purpose>
+				<inputDir>
+					<data>Data</data>
+				</inputDir>
+				<outputDir>
+					<image>CheckBPs</image>				
+				</outputDir>
+			</pro>		
+		</pros>
+	</auxiliary>
+</project>
+	

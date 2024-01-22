@@ -1,0 +1,20 @@
+;日期和区域参数
+dateNum = 1           ;时间调节
+waveLen = '211'       ;波长调节
+
+;区域参数
+nArea = '7'           ;区域编号
+
+;获取数据的日期
+date = aiaGetDate(dateNum)
+
+;输入路径和输入文件
+aiaDir = '/data1/moucz/AIA_BP/Data/' + date + '/' + waveLen + '/'
+aiaFile = 'aia.lev1*.fits'
+
+;通用画图参数
+aiaThreshold = [10.,200.]
+position = [0.1,0.15,0.75,0.8]
+barPosition = [0.85,0.1,0.88,0.9]
+barColor = GetColour('Yellow')
+charsize = 1.5

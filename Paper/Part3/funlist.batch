@@ -1,0 +1,9 @@
+.compile ../../AIA_BP/Program/aiaBP_db.pro
+.compile ../../HMI_BP/Program/hmiBP_dll.pro
+.compile ../../HMI_BP/Program/hmiBP_db.pro
+.compile ../Program2/repBP_db.pro
+.compile rep2BP_db.pro
+.compile rep2BP_dll.pro
+ 
+@ ../../../MyIdlPro/mylist.batch
+ls
